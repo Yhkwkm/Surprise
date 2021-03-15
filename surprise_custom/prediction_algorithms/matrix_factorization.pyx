@@ -13,6 +13,7 @@ from six.moves import range
 from .algo_base import AlgoBase
 from .predictions import PredictionImpossible
 from ..utils import get_rng
+from ..accuracy import rmse
 
 
 class SVD(AlgoBase):
@@ -129,7 +130,7 @@ class SVD(AlgoBase):
                  init_std_dev=.1, lr_all=.005,
                  reg_all=.02, lr_bu=None, lr_bi=None, lr_pu=None, lr_qi=None,
                  reg_bu=None, reg_bi=None, reg_pu=None, reg_qi=None,
-                 random_state=None, verbose=False):
+                 random_state=None, epoch_trace=False, verbose=False):
 
         self.n_factors = n_factors
         self.n_epochs = n_epochs
@@ -145,18 +146,20 @@ class SVD(AlgoBase):
         self.reg_pu = reg_pu if reg_pu is not None else reg_all
         self.reg_qi = reg_qi if reg_qi is not None else reg_all
         self.random_state = random_state
+        self.epoch_trace = epoch_trace
+        self.epoch_tracer = []
         self.verbose = verbose
 
         AlgoBase.__init__(self)
 
-    def fit(self, trainset):
+    def fit(self, trainset, testset=None):
 
         AlgoBase.fit(self, trainset)
-        self.sgd(trainset)
+        self.sgd(trainset, testset)
 
         return self
 
-    def sgd(self, trainset):
+    def sgd(self, trainset, testset=None):
 
         # OK, let's breath. I've seen so many different implementation of this
         # algorithm that I just not sure anymore of what it should do. I've
@@ -225,6 +228,10 @@ class SVD(AlgoBase):
         if not self.biased:
             global_mean = 0
 
+        if self.epoch_trace:
+            trainset_testable = trainset.build_testset()
+            self.epoch_tracer = {'Train_RMSE':[], 'Test_RMSE':[]}
+
         for current_epoch in range(self.n_epochs):
             if self.verbose:
                 print("Processing epoch {}".format(current_epoch))
@@ -248,10 +255,21 @@ class SVD(AlgoBase):
                     pu[u, f] += lr_pu * (err * qif - reg_pu * puf)
                     qi[i, f] += lr_qi * (err * puf - reg_qi * qif)
 
+            if self.epoch_trace and current_epoch % 10 == 0:
+                self.bu = bu
+                self.bi = bi
+                self.pu = pu
+                self.qi = qi
+                train_rmse = rmse(self.test(trainset_testable), verbose=False)
+                self.epoch_tracer['Train_RMSE'].append(train_rmse)
+                if testset:
+                    test_rmse = rmse(self.test(testset), verbose=False)
+                    self.epoch_tracer['Test_RMSE'].append(test_rmse)
         self.bu = bu
         self.bi = bi
         self.pu = pu
         self.qi = qi
+
 
     def estimate(self, u, i):
         # Should we cythonize this as well?
@@ -596,7 +614,8 @@ class NMF(AlgoBase):
 
     def __init__(self, n_factors=15, n_epochs=50, biased=False, reg_pu=.06,
                  reg_qi=.06, reg_bu=.02, reg_bi=.02, lr_bu=.005, lr_bi=.005,
-                 init_low=0, init_high=1, random_state=None, verbose=False):
+                 init_low=0, init_high=1, random_state=None,
+                 epoch_trace=False, verbose=False):
 
         self.n_factors = n_factors
         self.n_epochs = n_epochs
@@ -610,6 +629,8 @@ class NMF(AlgoBase):
         self.init_low = init_low
         self.init_high = init_high
         self.random_state = random_state
+        self.epoch_trace = epoch_trace
+        self.epoch_tracer = []
         self.verbose = verbose
 
         if self.init_low < 0:
@@ -617,14 +638,14 @@ class NMF(AlgoBase):
 
         AlgoBase.__init__(self)
 
-    def fit(self, trainset):
+    def fit(self, trainset, testset=None):
 
         AlgoBase.fit(self, trainset)
-        self.sgd(trainset)
+        self.sgd(trainset, testset)
 
         return self
 
-    def sgd(self, trainset):
+    def sgd(self, trainset, testset=None):
 
         # user and item factors
         cdef np.ndarray[np.double_t, ndim=2] pu
@@ -662,6 +683,10 @@ class NMF(AlgoBase):
 
         if not self.biased:
             global_mean = 0
+
+        if self.epoch_trace:
+            trainset_testable = trainset.build_testset()
+            self.epoch_tracer = {'Train_RMSE':[], 'Test_RMSE':[]}
 
         for current_epoch in range(self.n_epochs):
 
@@ -710,10 +735,22 @@ class NMF(AlgoBase):
                     item_denom[i, f] += n_ratings * reg_qi * qi[i, f]
                     qi[i, f] *= item_num[i, f] / item_denom[i, f]
 
+            if self.epoch_trace and current_epoch % 10 == 0:
+                self.bu = bu
+                self.bi = bi
+                self.pu = pu
+                self.qi = qi
+                train_rmse = rmse(self.test(trainset_testable), verbose=False)
+                self.epoch_tracer['Train_RMSE'].append(train_rmse)
+                if testset:
+                    test_rmse = rmse(self.test(testset), verbose=False)
+                    self.epoch_tracer['Test_RMSE'].append(test_rmse)
+
         self.bu = bu
         self.bi = bi
         self.pu = pu
         self.qi = qi
+
 
     def estimate(self, u, i):
         # Should we cythonize this as well?

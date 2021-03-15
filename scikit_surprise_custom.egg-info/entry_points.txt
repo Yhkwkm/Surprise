@@ -1,0 +1,3 @@
+[console_scripts]
+surprise_custom = surprise_custom.__main__:main
+

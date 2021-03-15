@@ -80,22 +80,22 @@ ext = '.pyx' if USE_CYTHON else '.c'
 
 extensions = [
     Extension(
-        'surprise.similarities',
-        ['surprise/similarities' + ext],
+        'surprise_custom.similarities',
+        ['surprise_custom/similarities' + ext],
         include_dirs=[np.get_include()]
     ),
     Extension(
-        'surprise.prediction_algorithms.matrix_factorization',
-        ['surprise/prediction_algorithms/matrix_factorization' + ext],
+        'surprise_custom.prediction_algorithms.matrix_factorization',
+        ['surprise_custom/prediction_algorithms/matrix_factorization' + ext],
         include_dirs=[np.get_include()]),
-    Extension('surprise.prediction_algorithms.optimize_baselines',
-              ['surprise/prediction_algorithms/optimize_baselines' + ext],
+    Extension('surprise_custom.prediction_algorithms.optimize_baselines',
+              ['surprise_custom/prediction_algorithms/optimize_baselines' + ext],
               include_dirs=[np.get_include()]),
-    Extension('surprise.prediction_algorithms.slope_one',
-              ['surprise/prediction_algorithms/slope_one' + ext],
+    Extension('surprise_custom.prediction_algorithms.slope_one',
+              ['surprise_custom/prediction_algorithms/slope_one' + ext],
               include_dirs=[np.get_include()]),
-    Extension('surprise.prediction_algorithms.co_clustering',
-              ['surprise/prediction_algorithms/co_clustering' + ext],
+    Extension('surprise_custom.prediction_algorithms.co_clustering',
+              ['surprise_custom/prediction_algorithms/co_clustering' + ext],
               include_dirs=[np.get_include()]),
 ]
 
@@ -106,7 +106,7 @@ else:
     ext_modules = extensions
 
 setup(
-    name='scikit-surprise',
+    name='scikit-surprise-custom',
     author='Nicolas Hug',
     author_email='contact@nicolas-hug.com',
 
@@ -138,5 +138,5 @@ setup(
     dependency_links=dependency_links,
 
     entry_points={'console_scripts':
-                  ['surprise = surprise.__main__:main']},
+                  ['surprise_custom = surprise_custom.__main__:main']},
 )
